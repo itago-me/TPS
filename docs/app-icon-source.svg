@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 文档说明：本文件是 Android 应用图标的矢量源文件，用于后续统一导出各尺寸 launcher 图标。 -->
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="140" y1="120" x2="900" y2="924" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF611F"/>
+      <stop offset="0.58" stop-color="#FF8A00"/>
+      <stop offset="1" stop-color="#FFB000"/>
+    </linearGradient>
+    <linearGradient id="chip" x1="332" y1="238" x2="692" y2="760" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF5E8"/>
+      <stop offset="1" stop-color="#FFE7C9"/>
+    </linearGradient>
+    <filter id="shadow" x="180" y="180" width="664" height="664" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+      <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+      <feOffset dy="24"/>
+      <feGaussianBlur stdDeviation="24"/>
+      <feComposite in2="hardAlpha" operator="out"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.470588 0 0 0 0 0.176471 0 0 0 0 0.0235294 0 0 0 0.16 0"/>
+      <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_0_1"/>
+      <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_0_1" result="shape"/>
+    </filter>
+  </defs>
+
+  <rect x="64" y="64" width="896" height="896" rx="228" fill="url(#bg)"/>
+
+  <circle cx="792" cy="230" r="78" fill="#FFD36B" fill-opacity="0.28"/>
+  <circle cx="228" cy="794" r="108" fill="#FFF2D8" fill-opacity="0.18"/>
+
+  <g filter="url(#shadow)">
+    <rect x="252" y="236" width="520" height="552" rx="132" fill="url(#chip)"/>
+    <path d="M390 360C390 285.442 444.807 226 512.5 226C580.193 226 635 285.442 635 360" stroke="#FFF8F1" stroke-width="44" stroke-linecap="round"/>
+    <path d="M332 408H692V602C692 691.47 619.47 764 530 764H494C404.53 764 332 691.47 332 602V408Z" fill="#FFFDF8"/>
+    <path d="M404 514H620" stroke="#FF7A1F" stroke-width="42" stroke-linecap="round"/>
+    <path d="M404 600H564" stroke="#FFB000" stroke-width="42" stroke-linecap="round"/>
+    <path d="M404 514L458 568L620 406" stroke="#13A36F" stroke-width="38" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <g>
+    <rect x="662" y="618" width="176" height="176" rx="60" fill="#13A36F"/>
+    <path d="M730 672C748.344 654.697 780.256 655.733 796.922 674.4C813.589 693.067 812.667 724.978 794.866 742.311L751.564 784.471L708.263 742.311C690.462 724.978 689.54 693.067 706.206 674.4C722.873 655.733 754.785 654.697 773.128 672" fill="#F4FFF8"/>
+  </g>
+</svg>
