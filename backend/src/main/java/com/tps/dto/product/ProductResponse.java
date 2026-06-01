@@ -26,6 +26,9 @@ public class ProductResponse {
     private Integer viewCount;
     private Integer favoriteCount;
     private LocalDateTime bumpedAt;
+    private String takedownReason;
+    private Long takedownBy;
+    private LocalDateTime takedownAt;
     private List<String> imageUrls;
     private boolean favorited;
     private LocalDateTime createdAt;

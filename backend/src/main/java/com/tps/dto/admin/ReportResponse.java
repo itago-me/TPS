@@ -14,6 +14,7 @@ public class ReportResponse {
     private Long reporterId;
     private Long productId;
     private String productTitle;
+    private String productImageUrl;
     private String reason;
     private String status;
     private LocalDateTime createdAt;

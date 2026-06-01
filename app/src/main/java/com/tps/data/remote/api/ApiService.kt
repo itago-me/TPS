@@ -71,6 +71,12 @@ interface ApiService {
     @GET("api/products/my")
     suspend fun getMyProducts(): ApiResponse<List<ProductDto>>
 
+    @POST("api/products/{id}/report")
+    suspend fun reportProduct(
+        @Path("id") id: Long,
+        @Query("reason") reason: String
+    ): ApiResponse<Unit>
+
     // Favorites
     @POST("api/favorites/{productId}/toggle")
     suspend fun toggleFavorite(@Path("productId") productId: Long): ApiResponse<Boolean>
@@ -187,13 +193,24 @@ interface ApiService {
     @GET("api/admin/reports")
     suspend fun adminGetReports(@Query("page") page: Int = 0): ApiResponse<PageResponse<ReportDto>>
 
+    @GET("api/admin/products")
+    suspend fun adminGetProducts(
+        @Query("status") status: String? = null,
+        @Query("page") page: Int = 0,
+        @Query("size") size: Int = 20
+    ): ApiResponse<PageResponse<ProductDto>>
+
     @PUT("api/admin/products/{id}/takedown")
-    suspend fun adminTakedownProduct(@Path("id") id: Long): ApiResponse<Unit>
+    suspend fun adminTakedownProduct(
+        @Path("id") id: Long,
+        @Query("reason") reason: String
+    ): ApiResponse<Unit>
 
     @PUT("api/admin/reports/{id}/handle")
     suspend fun adminHandleReport(
         @Path("id") id: Long,
-        @Query("takedown") takedown: Boolean = true
+        @Query("takedown") takedown: Boolean = true,
+        @Query("reason") reason: String? = null
     ): ApiResponse<Unit>
 
     @GET("api/admin/orders")

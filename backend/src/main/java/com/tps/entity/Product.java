@@ -60,6 +60,15 @@ public class Product {
     @Column(name = "last_bump_date")
     private java.time.LocalDate lastBumpDate;
 
+    @Column(name = "takedown_reason", length = 255)
+    private String takedownReason;
+
+    @Column(name = "takedown_by")
+    private Long takedownBy;
+
+    @Column(name = "takedown_at")
+    private LocalDateTime takedownAt;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 

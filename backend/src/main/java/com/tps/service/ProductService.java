@@ -10,6 +10,7 @@ import com.tps.entity.Notification;
 import com.tps.entity.Product;
 import com.tps.entity.ProductImage;
 import com.tps.entity.User;
+import com.tps.exception.BusinessException;
 import com.tps.repository.*;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
@@ -140,9 +141,13 @@ public class ProductService {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new IllegalArgumentException("商品不存在"));
         if (!product.getUserId().equals(userId)) throw new IllegalArgumentException("无权操作");
-        if (product.getStatus() == Product.ProductStatus.SOLD && status != Product.ProductStatus.SOLD) {
-            throw new IllegalArgumentException("已售出商品不能重新上架");
+        if (status == Product.ProductStatus.SOLD) {
+            throw BusinessException.conflict("商品成交状态只能由订单流程更新");
         }
+        if (product.getStatus() == Product.ProductStatus.SOLD && status != Product.ProductStatus.SOLD) {
+            throw BusinessException.conflict("已售出商品不能重新上架");
+        }
+        if (product.getStatus() == status) return;
         product.setStatus(status);
         productRepository.save(product);
     }
@@ -202,7 +207,7 @@ public class ProductService {
         notificationRepository.save(notification);
     }
 
-    private ProductResponse toResponse(Product p, Long currentUserId) {
+    public ProductResponse toResponse(Product p, Long currentUserId) {
         ProductResponse r = new ProductResponse();
         r.setId(p.getId());
         r.setUserId(p.getUserId());
@@ -220,6 +225,9 @@ public class ProductService {
         r.setViewCount(p.getViewCount());
         r.setFavoriteCount(p.getFavoriteCount());
         r.setBumpedAt(p.getBumpedAt());
+        r.setTakedownReason(p.getTakedownReason());
+        r.setTakedownBy(p.getTakedownBy());
+        r.setTakedownAt(p.getTakedownAt());
         r.setCreatedAt(p.getCreatedAt());
         List<String> urls = productImageRepository.findByProductIdOrderBySortOrder(p.getId())
                 .stream().map(ProductImage::getImageUrl).map(fileService::toAbsoluteUrl).collect(Collectors.toList());

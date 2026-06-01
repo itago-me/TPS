@@ -30,7 +30,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import coil.compose.AsyncImage
 import com.tps.ui.theme.AppAsyncImage
 import com.tps.ui.theme.MarketBackground
 import com.tps.ui.theme.MarketCard
@@ -47,6 +46,8 @@ fun PublishProductScreen(onBack: () -> Unit, viewModel: PublishProductViewModel 
     var category by remember { mutableStateOf("") }
     var condition by remember { mutableStateOf("GOOD") }
     var location by remember { mutableStateOf("") }
+    val priceValue = price.toDoubleOrNull()
+    val canPublish = title.isNotBlank() && category.isNotBlank() && priceValue != null && priceValue > 0.0
     val categories = listOf("数码", "服装", "书籍", "家居", "运动", "其他")
     val conditions = listOf("NEW" to "全新", "LIKE_NEW" to "几乎全新", "GOOD" to "成色好", "FAIR" to "有使用痕迹")
 
@@ -54,12 +55,20 @@ fun PublishProductScreen(onBack: () -> Unit, viewModel: PublishProductViewModel 
         viewModel.addImages(uris)
     }
 
-    LaunchedEffect(uiState.isSuccess) {
-        if (uiState.isSuccess) onBack()
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(uiState.error) {
+        uiState.error?.let { snackbarHostState.showSnackbar(it) }
+    }
+    LaunchedEffect(uiState.successMessage) {
+        uiState.successMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            onBack()
+        }
     }
 
     Scaffold(
         containerColor = Color.Transparent,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("发布闲置", fontWeight = FontWeight.Bold) },
@@ -70,9 +79,9 @@ fun PublishProductScreen(onBack: () -> Unit, viewModel: PublishProductViewModel 
             Surface(color = Color.White, tonalElevation = 8.dp) {
             Box(Modifier.fillMaxWidth().padding(12.dp)) {
                 Button(
-                    onClick = { viewModel.publish(title, description, price.toDoubleOrNull() ?: 0.0, category, condition, location) },
+                    onClick = { viewModel.publish(title.trim(), description.trim(), priceValue ?: 0.0, category, condition, location.trim()) },
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = !uiState.isLoading,
+                    enabled = !uiState.isLoading && canPublish,
                     colors = ButtonDefaults.buttonColors(containerColor = MarketOrange)
                 ) {
                     if (uiState.isLoading) CircularProgressIndicator(Modifier.size(18.dp))
@@ -111,9 +120,28 @@ fun PublishProductScreen(onBack: () -> Unit, viewModel: PublishProductViewModel 
                     }
                 }
             }
-            OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("标题，例如 iPad Air 九成新") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp))
+            OutlinedTextField(
+                value = title,
+                onValueChange = { if (it.length <= 100) title = it },
+                label = { Text("标题，例如 iPad Air 九成新") },
+                supportingText = { Text("${title.length}/100") },
+                isError = title.length > 100,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp)
+            )
             OutlinedTextField(value = description, onValueChange = { description = it }, label = { Text("描述成色、配件、交易时间") }, modifier = Modifier.fillMaxWidth(), minLines = 3, shape = RoundedCornerShape(18.dp))
-            OutlinedTextField(value = price, onValueChange = { price = it }, label = { Text("价格（元）") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal))
+            OutlinedTextField(
+                value = price,
+                onValueChange = { value -> price = value.filter { it.isDigit() || it == '.' }.take(10) },
+                label = { Text("价格（元）") },
+                supportingText = {
+                    if (price.isNotBlank() && (priceValue == null || priceValue <= 0.0)) Text("请输入大于0的数字")
+                },
+                isError = price.isNotBlank() && (priceValue == null || priceValue <= 0.0),
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal)
+            )
             OutlinedTextField(value = location, onValueChange = { location = it }, label = { Text("交易地点，如 图书馆门口") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp))
             }
             }
@@ -137,6 +165,9 @@ fun PublishProductScreen(onBack: () -> Unit, viewModel: PublishProductViewModel 
             }
 
             if (uiState.error != null) Text(uiState.error!!, color = MaterialTheme.colorScheme.error)
+            if (!canPublish) {
+                Text("填写标题、价格并选择分类后即可发布", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
         }
     }

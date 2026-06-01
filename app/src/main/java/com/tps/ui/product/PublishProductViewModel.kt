@@ -25,6 +25,7 @@ data class PublishUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val isSuccess: Boolean = false,
+    val successMessage: String? = null,
     val selectedImages: List<Uri> = emptyList()
 )
 
@@ -50,6 +51,12 @@ class PublishProductViewModel @Inject constructor(
     }
 
     fun publish(title: String, description: String, price: Double, category: String, condition: String, location: String) {
+        val validationError = validate(title, price, category, condition)
+        if (validationError != null) {
+            _uiState.value = _uiState.value.copy(error = validationError)
+            return
+        }
+
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
@@ -65,7 +72,11 @@ class PublishProductViewModel @Inject constructor(
                 val req = ProductRequest(title, description, price, category, condition, location, imageUrls)
                 val response = apiService.createProduct(req)
                 if (response.code == 200 && response.data != null) {
-                    _uiState.value = _uiState.value.copy(isLoading = false, isSuccess = true)
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        isSuccess = true,
+                        successMessage = "商品已发布，可在“我发布的”中管理上下架"
+                    )
                 } else {
                     _uiState.value = _uiState.value.copy(isLoading = false, error = response.message)
                 }
@@ -73,6 +84,15 @@ class PublishProductViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(isLoading = false, error = e.message)
             }
         }
+    }
+
+    private fun validate(title: String, price: Double, category: String, condition: String): String? {
+        if (title.isBlank()) return "请填写商品标题"
+        if (title.length > 100) return "商品标题最多100个字"
+        if (price <= 0.0) return "请输入大于0的价格"
+        if (category.isBlank()) return "请选择商品分类"
+        if (condition.isBlank()) return "请选择商品成色"
+        return null
     }
 
     private fun resolveFileName(uri: Uri): String {

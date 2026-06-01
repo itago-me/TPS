@@ -50,6 +50,9 @@ public class DataInitializer implements ApplicationRunner {
         execute("ALTER TABLE products ADD COLUMN bumped_at DATETIME NULL COMMENT '擦亮时间'");
         execute("ALTER TABLE products ADD COLUMN bump_count_today INT DEFAULT 0 COMMENT '今日擦亮次数'");
         execute("ALTER TABLE products ADD COLUMN last_bump_date DATE NULL COMMENT '最近擦亮日期'");
+        execute("ALTER TABLE products ADD COLUMN takedown_reason VARCHAR(255) NULL COMMENT '管理员下架原因'");
+        execute("ALTER TABLE products ADD COLUMN takedown_by BIGINT NULL COMMENT '下架管理员ID'");
+        execute("ALTER TABLE products ADD COLUMN takedown_at DATETIME NULL COMMENT '管理员下架时间'");
 
         execute("ALTER TABLE messages ADD COLUMN is_read TINYINT DEFAULT 0 COMMENT '是否已读'");
 

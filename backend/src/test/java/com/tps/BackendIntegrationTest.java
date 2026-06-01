@@ -96,6 +96,34 @@ class BackendIntegrationTest {
     }
 
     @Test
+    void productOwnerCanTakedownAndRelistButCannotMarkSoldDirectly() throws Exception {
+        String sellerToken = register("13800138110", "seller").at("/data/token").asText();
+        Long productId = createProduct(sellerToken, null);
+
+        mockMvc.perform(patch("/api/products/{id}/status", productId)
+                        .header("Authorization", "Bearer " + sellerToken)
+                        .param("status", "OFF"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("OFF"));
+
+        mockMvc.perform(get("/api/products"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[*].id", not(hasItem(productId.intValue()))));
+
+        mockMvc.perform(patch("/api/products/{id}/status", productId)
+                        .header("Authorization", "Bearer " + sellerToken)
+                        .param("status", "ON_SALE"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("ON_SALE"));
+
+        mockMvc.perform(patch("/api/products/{id}/status", productId)
+                        .header("Authorization", "Bearer " + sellerToken)
+                        .param("status", "SOLD"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value(409));
+    }
+
+    @Test
     void orderFlowSupportsTradeReviewAndPreventsDuplicateActiveOrders() throws Exception {
         String sellerToken = register("13800138002", "seller").at("/data/token").asText();
         String buyerToken = register("13800138003", "buyer").at("/data/token").asText();
@@ -229,12 +257,41 @@ class BackendIntegrationTest {
 
         mockMvc.perform(put("/api/admin/reports/{id}/handle", reportId)
                         .header("Authorization", "Bearer " + adminToken)
-                        .param("takedown", "true"))
+                        .param("takedown", "true")
+                        .param("reason", "平台判定违规"))
                 .andExpect(status().isOk());
 
         mockMvc.perform(get("/api/products/{id}", productId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.status").value("OFF"));
+                .andExpect(jsonPath("$.data.status").value("OFF"))
+                .andExpect(jsonPath("$.data.takedownReason").value("平台判定违规"));
+    }
+
+    @Test
+    void adminCanListOnSaleProductsAndForceTakedownWithReason() throws Exception {
+        String sellerToken = register("13800138106", "seller").at("/data/token").asText();
+        String adminToken = createAdmin("13800138107");
+        Long productId = createProduct(sellerToken, null);
+
+        mockMvc.perform(get("/api/admin/products")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .param("status", "ON_SALE"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[*].id", hasItem(productId.intValue())));
+
+        mockMvc.perform(put("/api/admin/products/{id}/takedown", productId)
+                        .header("Authorization", "Bearer " + adminToken)
+                        .param("reason", "含有违规联系方式"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/products/{id}", productId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("OFF"))
+                .andExpect(jsonPath("$.data.takedownReason").value("含有违规联系方式"));
+
+        mockMvc.perform(get("/api/notifications").header("Authorization", "Bearer " + sellerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[*].type", hasItem("PRODUCT_TAKEDOWN")));
     }
 
     @Test
@@ -252,6 +309,7 @@ class BackendIntegrationTest {
                                 "phone", phone,
                                 "password", "123456",
                                 "code", "1234",
+                                "studentId", phone.substring(3),
                                 "nickname", nickname
                         ))))
                 .andExpect(status().isOk())

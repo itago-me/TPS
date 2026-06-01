@@ -136,6 +136,21 @@ class ProductDetailViewModel @Inject constructor(
         }
     }
 
+    fun reportProduct(productId: Long, reason: String) {
+        if (reason.isBlank()) {
+            _uiState.value = _uiState.value.copy(error = "请填写举报原因")
+            return
+        }
+        viewModelScope.launch {
+            try {
+                apiService.reportProduct(productId, reason.trim())
+                _uiState.value = _uiState.value.copy(actionSuccess = "举报已提交，平台将进行审核")
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(error = e.message ?: "举报失败")
+            }
+        }
+    }
+
     fun consumeActionSuccess() {
         _uiState.value = _uiState.value.copy(actionSuccess = null)
     }

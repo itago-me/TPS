@@ -11,6 +11,7 @@ import com.tps.service.AdminService;
 import com.tps.service.FeedbackService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -56,16 +57,34 @@ public class AdminController {
         return ApiResponse.success(PageResponse.from(adminService.getReportedProducts(page, size)));
     }
 
+    @GetMapping("/products")
+    public ApiResponse<?> getProducts(
+            @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ApiResponse.success(PageResponse.from(adminService.getProducts(status, page, size)));
+    }
+
     @PutMapping("/products/{id}/takedown")
-    public ApiResponse<?> takedownProduct(@PathVariable Long id) {
-        adminService.takedownProduct(id);
+    public ApiResponse<?> takedownProduct(@PathVariable Long id,
+                                          @RequestParam String reason,
+                                          Authentication authentication) {
+        Long adminId = authentication != null && authentication.getPrincipal() instanceof Long
+                ? (Long) authentication.getPrincipal()
+                : null;
+        adminService.takedownProduct(id, reason, adminId);
         return ApiResponse.success();
     }
 
     @PutMapping("/reports/{id}/handle")
     public ApiResponse<?> handleReport(@PathVariable Long id,
-                                       @RequestParam(defaultValue = "true") boolean takedown) {
-        adminService.handleReport(id, takedown);
+                                       @RequestParam(defaultValue = "true") boolean takedown,
+                                       @RequestParam(required = false) String reason,
+                                       Authentication authentication) {
+        Long adminId = authentication != null && authentication.getPrincipal() instanceof Long
+                ? (Long) authentication.getPrincipal()
+                : null;
+        adminService.handleReport(id, takedown, reason, adminId);
         return ApiResponse.success();
     }
 

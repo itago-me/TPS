@@ -78,6 +78,8 @@ fun ProductDetailScreen(
             uiState.product?.let { product ->
                 var showMenu by remember { mutableStateOf(false) }
                 var showDeleteDialog by remember { mutableStateOf(false) }
+                var showReportDialog by remember { mutableStateOf(false) }
+                var reportReason by remember { mutableStateOf("") }
                 if (showDeleteDialog) {
                     AlertDialog(
                         onDismissRequest = { showDeleteDialog = false },
@@ -88,6 +90,47 @@ fun ProductDetailScreen(
                         },
                         dismissButton = {
                             TextButton(onClick = { showDeleteDialog = false }) { Text("取消") }
+                        }
+                    )
+                }
+                if (showReportDialog) {
+                    AlertDialog(
+                        onDismissRequest = {
+                            showReportDialog = false
+                            reportReason = ""
+                        },
+                        title = { Text("举报商品") },
+                        text = {
+                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Text("请说明该商品存在的问题，平台管理员会在后台审核。")
+                                OutlinedTextField(
+                                    value = reportReason,
+                                    onValueChange = { reportReason = it.take(255) },
+                                    label = { Text("举报原因") },
+                                    minLines = 3,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Text("${reportReason.length}/255", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        },
+                        confirmButton = {
+                            Button(
+                                onClick = {
+                                    viewModel.reportProduct(product.id, reportReason)
+                                    showReportDialog = false
+                                    reportReason = ""
+                                },
+                                enabled = reportReason.isNotBlank(),
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                            ) {
+                                Text("提交举报")
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = {
+                                showReportDialog = false
+                                reportReason = ""
+                            }) { Text("取消") }
                         }
                     )
                 }
@@ -110,6 +153,16 @@ fun ProductDetailScreen(
                                 DropdownMenuItem(
                                     text = { Text("下架商品", color = MaterialTheme.colorScheme.error) },
                                     onClick = { showMenu = false; showDeleteDialog = true }
+                                )
+                            }
+                        } else {
+                            IconButton(onClick = { showMenu = true }) {
+                                Icon(Icons.Default.MoreVert, "更多操作")
+                            }
+                            DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                                DropdownMenuItem(
+                                    text = { Text("举报商品", color = MaterialTheme.colorScheme.error) },
+                                    onClick = { showMenu = false; showReportDialog = true }
                                 )
                             }
                         }
@@ -153,19 +206,32 @@ fun ProductDetailScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     if (uiState.isOwner) {
-                        OutlinedButton(
-                            onClick = { viewModel.bumpProduct(product.id) },
-                            modifier = Modifier.weight(1f)
-                        ) { Text("擦亮商品") }
-                        Button(
-                            onClick = {
-                                val nextStatus = if (product.status == "ON_SALE" || product.status == "AVAILABLE") "OFF" else "ON_SALE"
-                                viewModel.updateStatus(product.id, nextStatus)
-                            },
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF5A1F))
-                        ) {
-                            Text(if (product.status == "ON_SALE" || product.status == "AVAILABLE") "下架商品" else "重新上架")
+                        when (product.status) {
+                            "ON_SALE", "AVAILABLE" -> {
+                                OutlinedButton(
+                                    onClick = { viewModel.bumpProduct(product.id) },
+                                    modifier = Modifier.weight(1f)
+                                ) { Text("擦亮商品") }
+                                Button(
+                                    onClick = { viewModel.updateStatus(product.id, "OFF") },
+                                    modifier = Modifier.weight(1f),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF5A1F))
+                                ) { Text("下架商品") }
+                            }
+                            "OFF" -> {
+                                Button(
+                                    onClick = { viewModel.updateStatus(product.id, "ON_SALE") },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF5A1F))
+                                ) { Text("重新上架") }
+                            }
+                            "SOLD" -> {
+                                Text(
+                                    text = "商品已成交，不能重新上架",
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     } else {
                         OutlinedButton(
@@ -285,7 +351,12 @@ fun ProductDetailScreen(
                                 Text(decimalPart, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFFE93600), modifier = Modifier.padding(bottom = 4.dp))
                                 Spacer(Modifier.weight(1f))
                                 Text(
-                                    if (product.status == "ON_SALE" || product.status == "AVAILABLE") "在售" else product.status,
+                                    when (product.status) {
+                                        "ON_SALE", "AVAILABLE" -> "在售"
+                                        "OFF" -> "已下架"
+                                        "SOLD" -> "已售出"
+                                        else -> product.status
+                                    },
                                     color = Color(0xFFFF5A1F),
                                     fontWeight = FontWeight.Bold,
                                     modifier = Modifier.clip(CircleShape).background(Color(0xFFFFE1D2)).padding(horizontal = 10.dp, vertical = 5.dp)
@@ -293,6 +364,17 @@ fun ProductDetailScreen(
                             }
                             Text(product.title, fontSize = 21.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF241A16), lineHeight = 27.sp)
                             product.description?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant, lineHeight = 21.sp) }
+                            if (uiState.isOwner && product.status == "OFF" && !product.takedownReason.isNullOrBlank()) {
+                                Text(
+                                    text = "平台下架原因：${product.takedownReason}",
+                                    color = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(14.dp))
+                                        .background(Color(0xFFFFF0F0))
+                                        .padding(12.dp)
+                                )
+                            }
                             HorizontalDivider(color = Color(0xFFFFE1D2))
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 InfoChip("${product.category ?: "其他"}")

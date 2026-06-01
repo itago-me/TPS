@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.tps.data.remote.api.ApiService
 import com.tps.data.remote.dto.AdminStats
 import com.tps.data.remote.dto.OrderDto
+import com.tps.data.remote.dto.ProductDto
 import com.tps.data.remote.dto.ReportDto
 import com.tps.data.remote.dto.UserProfile
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -19,11 +20,14 @@ import javax.inject.Inject
 
 data class AdminUiState(
     val users: List<UserProfile> = emptyList(),
+    val listedProducts: List<ProductDto> = emptyList(),
     val reportedProducts: List<ReportDto> = emptyList(),
     val orders: List<OrderDto> = emptyList(),
     val stats: AdminStats? = null,
     val isLoading: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val successMessage: String? = null,
+    val operatingProductId: Long? = null
 )
 
 @HiltViewModel
@@ -36,6 +40,7 @@ class AdminViewModel @Inject constructor(
 
     init {
         loadUsers()
+        loadListedProducts()
         loadReportedProducts()
         loadOrders()
         loadStats()
@@ -46,6 +51,17 @@ class AdminViewModel @Inject constructor(
             try {
                 val resp = apiService.adminGetUsers()
                 _uiState.value = _uiState.value.copy(users = resp.data?.content ?: emptyList())
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(error = e.message)
+            }
+        }
+    }
+
+    fun loadListedProducts() {
+        viewModelScope.launch {
+            try {
+                val resp = apiService.adminGetProducts(status = "ON_SALE")
+                _uiState.value = _uiState.value.copy(listedProducts = resp.data?.content ?: emptyList())
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(error = e.message)
             }
@@ -97,14 +113,49 @@ class AdminViewModel @Inject constructor(
         }
     }
 
-    fun handleReport(reportId: Long, takedown: Boolean) {
+    fun handleReport(reportId: Long, takedown: Boolean, reason: String? = null) {
+        if (takedown && reason.isNullOrBlank()) {
+            _uiState.value = _uiState.value.copy(error = "请填写下架原因")
+            return
+        }
         viewModelScope.launch {
             try {
-                apiService.adminHandleReport(reportId, takedown)
+                apiService.adminHandleReport(reportId, takedown, reason?.trim())
+                _uiState.value = _uiState.value.copy(successMessage = if (takedown) "举报已处理，商品已下架" else "举报已处理")
                 loadReportedProducts()
+                loadListedProducts()
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(error = e.message)
             }
         }
+    }
+
+    fun takedownProduct(productId: Long, reason: String) {
+        if (reason.isBlank()) {
+            _uiState.value = _uiState.value.copy(error = "请填写下架原因")
+            return
+        }
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                operatingProductId = productId,
+                error = null,
+                successMessage = null
+            )
+            try {
+                apiService.adminTakedownProduct(productId, reason.trim())
+                _uiState.value = _uiState.value.copy(
+                    successMessage = "商品已强制下架",
+                    operatingProductId = null
+                )
+                loadListedProducts()
+                loadStats()
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(error = e.message, operatingProductId = null)
+            }
+        }
+    }
+
+    fun consumeMessages() {
+        _uiState.value = _uiState.value.copy(error = null, successMessage = null)
     }
 }

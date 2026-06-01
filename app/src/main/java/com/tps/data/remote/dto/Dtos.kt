@@ -90,6 +90,9 @@ data class ProductDto(
     val viewCount: Int,
     val favoriteCount: Int = 0,
     val bumpedAt: String? = null,
+    val takedownReason: String? = null,
+    val takedownBy: Long? = null,
+    val takedownAt: String? = null,
     val imageUrls: List<String>,
     val favorited: Boolean,
     val createdAt: String?
@@ -169,6 +172,8 @@ data class ReportDto(
     val id: Long,
     val reporterId: Long,
     val productId: Long,
+    val productTitle: String? = null,
+    val productImageUrl: String? = null,
     val reason: String?,
     val status: String,
     val createdAt: String?
